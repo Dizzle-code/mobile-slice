@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mobile Slice – Pixel-Slicer für den Bambu Lab P1S</title>
+  <meta name="description" content="STL oder 3MF öffnen, slicen, ab auf den P1S. Für Windows, macOS und Android.">
+  <meta name="theme-color" content="#1B1B2F">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%231B1B2F'/%3E%3Cpath fill='%23FF8A3D' d='M7 2h2v1h2v1h2v1h-2v1H9v1H7V6H5V5H3V4h2V3h2z'/%3E%3Cpath fill='%23F2EFE6' d='M2 5h1v7h1v1h2v1h1v1h2v-1h1v-1h2v-1h1V5h1v8h-2v1h-2v1H7v-1H5v-1H3v-1H2zM8 7h1v8H8z'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/PixelifySans.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="hero panel">
+      <canvas class="icon bob" data-glyph="cube" data-scale="4" aria-hidden="true"></canvas>
+      <div>
+        <h1>Mobile Slice</h1>
+        <p class="muted">STL oder 3MF öffnen, slicen, ab auf den P1S.</p>
+      </div>
+    </header>
+
+    <section class="panel primary-box" aria-labelledby="dl-title">
+      <h2 id="dl-title">Herunterladen</h2>
+      <p id="detected" class="muted">Dein System wird erkannt …</p>
+      <a id="primary" class="button primary expand" href="https://github.com/Dizzle-code/mobile-slice/releases/latest">
+        <canvas class="icon" data-glyph="download" data-scale="1" data-ink="#1B1B2F" data-second="#1B1B2F" aria-hidden="true"></canvas>
+        <span id="primary-label">Zu den Downloads</span>
+      </a>
+      <p id="primary-hint" class="small muted"></p>
+      <p id="version" class="small muted"></p>
+    </section>
+
+    <h2 class="section-title">Alle Systeme</h2>
+    <div class="grid" id="platforms">
+      <article class="panel platform" data-os="windows">
+        <canvas class="icon" data-glyph="windows" data-scale="2" aria-hidden="true"></canvas>
+        <h3>Windows</h3>
+        <p class="small muted">Windows 10 und 11, 64 Bit. Installer, ohne Administratorrechte.</p>
+        <a class="button expand" data-asset="windows" href="#">Setup (.exe)</a>
+        <p class="small muted size"></p>
+      </article>
+      <article class="panel platform" data-os="macos">
+        <canvas class="icon" data-glyph="apple" data-scale="2" aria-hidden="true"></canvas>
+        <h3>macOS</h3>
+        <p class="small muted">macOS 12 oder neuer, nur Apple Silicon (M1 und neuer).</p>
+        <a class="button expand" data-asset="macos" href="#">Disk-Image (.dmg)</a>
+        <p class="small muted size"></p>
+      </article>
+      <article class="panel platform" data-os="android">
+        <canvas class="icon" data-glyph="android" data-scale="2" aria-hidden="true"></canvas>
+        <h3>Android</h3>
+        <p class="small muted">Android 12 oder neuer, 64-Bit-ARM (fast alle aktuellen Geräte).</p>
+        <a class="button expand" data-asset="android" href="#">App (.apk)</a>
+        <p class="small muted size"></p>
+      </article>
+    </div>
+
+    <h2 class="section-title">Was die App kann</h2>
+    <div class="grid features">
+      <div class="panel stat"><canvas class="icon" data-glyph="folder" data-scale="2" aria-hidden="true"></canvas><h3>Modell öffnen</h3><p class="small muted">STL und 3MF, zum Beispiel direkt von MakerWorld.</p></div>
+      <div class="panel stat"><canvas class="icon" data-glyph="layers" data-scale="2" data-second="#5BD46A" aria-hidden="true"></canvas><h3>Slicen auf dem Gerät</h3><p class="small muted">Die OrcaSlicer-Engine läuft lokal. Kein Konto, keine Cloud.</p></div>
+      <div class="panel stat"><canvas class="icon" data-glyph="upload" data-scale="2" data-second="#FFD447" aria-hidden="true"></canvas><h3>Ab auf den P1S</h3><p class="small muted">Druck im lokalen Netzwerk senden und den Fortschritt verfolgen.</p></div>
+    </div>
+
+    <section class="panel notes" aria-labelledby="install-title">
+      <h2 id="install-title">Installation</h2>
+      <details open data-os="windows">
+        <summary>Windows</summary>
+        <p>Setup starten. Weil der Installer nicht signiert ist, warnt SmartScreen beim ersten Mal: <b>„Weitere Informationen“ → „Trotzdem ausführen“</b>.</p>
+      </details>
+      <details data-os="macos">
+        <summary>macOS</summary>
+        <p>DMG öffnen und „Mobile Slice“ auf „Programme“ ziehen. Die App ist nur ad hoc signiert: beim ersten Start per <b>Rechtsklick → „Öffnen“</b> starten oder im Terminal ausführen:</p>
+        <pre><code>xattr -dr com.apple.quarantine "/Applications/Mobile Slice.app"</code></pre>
+        <p>Den Zugriff aufs lokale Netzwerk erlauben, sonst wird der Drucker nicht gefunden.</p>
+      </details>
+      <details data-os="android">
+        <summary>Android</summary>
+        <p>APK auf dem Gerät öffnen und die Installation aus dieser Quelle erlauben.</p>
+      </details>
+    </section>
+
+    <footer class="small muted">
+      <p>
+        <a href="https://github.com/Dizzle-code/mobile-slice">Quellcode auf GitHub</a> ·
+        <a href="https://github.com/Dizzle-code/mobile-slice/releases">Alle Versionen</a> ·
+        Lizenz AGPL-3.0 · Slicer-Engine: OrcaSlicer (Snapmaker-Fork) ·
+        Schrift: Pixelify Sans (<a href="fonts/OFL.txt">OFL</a>)
+      </p>
+      <p>Kein offizielles Produkt von Bambu Lab.</p>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
