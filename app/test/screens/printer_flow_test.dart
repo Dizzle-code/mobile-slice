@@ -7,7 +7,7 @@ import 'package:mobile_slice/app_services.dart';
 import 'package:mobile_slice/engine/slicer_channel.dart';
 import 'package:mobile_slice/main.dart';
 import 'package:mobile_slice/model/stl_reader.dart';
-import 'package:mobile_slice/preview/model_viewer.dart';
+import 'package:mobile_slice/preview/plate_viewer.dart';
 import 'package:mobile_slice/printer/bambu_printer.dart';
 import 'package:mobile_slice/printer/ftps_client.dart';
 import 'package:mobile_slice/printer/printer_discovery.dart';
@@ -147,7 +147,8 @@ void main() {
     broker.report(fullReport());
 
     await tester.tap(find.text('Modell öffnen'));
-    await settleFinder(tester, find.byType(ModelViewer));
+    await settleFinder(tester, find.byType(PlateViewer));
+    await settle(tester, until: () => services.project.plate.objects.length == 1);
     await tester.tap(find.text('Slicen'));
     await settleFinder(tester, find.text('Fertig gesliced!'));
     await tester.pump(const Duration(milliseconds: 500));
@@ -190,7 +191,8 @@ void main() {
     broker.report(fullReport());
 
     await tester.tap(find.text('Modell öffnen'));
-    await settleFinder(tester, find.byType(ModelViewer));
+    await settleFinder(tester, find.byType(PlateViewer));
+    await settle(tester, until: () => services.project.plate.objects.length == 1);
     await tester.tap(find.text('Slicen'));
     await settleFinder(tester, find.text('Fertig gesliced!'));
     await tester.pump(const Duration(milliseconds: 500));

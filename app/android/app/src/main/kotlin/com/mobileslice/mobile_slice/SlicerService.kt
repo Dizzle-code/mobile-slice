@@ -40,6 +40,8 @@ class SlicerService : Service() {
         val modelId: String?,
         /** Uniform model scale factor; null means 1. */
         val scale: Double? = null,
+        /** Plate JSON with several placed objects; replaces [model] and [scale] when set. */
+        val plate: File? = null,
     )
 
     inner class LocalBinder : Binder() {
@@ -115,9 +117,13 @@ class SlicerService : Service() {
             exe.path,
             "--resources", File(engineData, "resources").path,
             "--printer", File(profiles, "printer.json").path,
-            "--model", job.model.path,
         )
-        job.scale?.takeIf { it != 1.0 }?.let { command += listOf("--scale", it.toString()) }
+        if (job.plate != null) {
+            command += listOf("--plate", job.plate.path)
+        } else {
+            command += listOf("--model", job.model.path)
+            job.scale?.takeIf { it != 1.0 }?.let { command += listOf("--scale", it.toString()) }
+        }
         val outputs = linkedMapOf<String, Any?>()
         if (job.type == "preview") {
             val stl = File(job.outputDir, "preview.stl")
