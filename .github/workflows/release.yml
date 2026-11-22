@@ -1,0 +1,196 @@
+# Builds every platform and publishes a GitHub release:
+#   Windows: Inno Setup installer (.exe), Android: APK (arm64), macOS: DMG with "Mobile Slice.app" (Apple Silicon).
+# The Windows and Android engines are committed prebuilt; the macOS engine comes from the cache of the macOS workflow
+# and is only rebuilt when that cache misses.
+name: Release
+
+on:
+  push:
+    branches: [release-builds]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v1.0.0
+  FLUTTER_VERSION: 3.50.1
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: App bauen
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build windows --release
+          if (-not (Test-Path build/windows/x64/runner/Release/engine/slicer_cli.exe)) { throw "slicer_cli.exe fehlt im Build" }
+
+      - name: Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Installer bauen
+        run: |
+          $version = "${{ env.RELEASE_TAG }}".TrimStart('v')
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$version" `
+            "/DSourceDir=$env:GITHUB_WORKSPACE\app\build\windows\x64\runner\Release" "/DOutputDir=$env:RUNNER_TEMP\dist" `
+            packaging\windows\mobile-slice.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen" }
+          Get-ChildItem "$env:RUNNER_TEMP\dist"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: ${{ runner.temp }}/dist/*.exe
+          retention-days: 7
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: APK bauen
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libslicer_cli.so' || { echo "Engine fehlt in der APK" >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/dist"
+          cp "$APK" "$RUNNER_TEMP/dist/Mobile-Slice-${RELEASE_TAG#v}-Android-arm64.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: ${{ runner.temp }}/dist/*.apk
+          retention-days: 7
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 350
+    env:
+      OSX_DEPLOYMENT_TARGET: "12.0"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Engine-Version
+        id: engine
+        run: |
+          source engine/VERSIONS
+          echo "commit=$ENGINE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "arch=$(uname -m)" >> "$GITHUB_OUTPUT"
+
+      # Same key as macos.yml, so the engine built on main is reused here.
+      - name: Engine aus dem Cache
+        id: engine-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: app/macos/engine
+          key: slicer-cli-macos-${{ steps.engine.outputs.arch }}-${{ env.OSX_DEPLOYMENT_TARGET }}-${{ steps.engine.outputs.commit }}-${{ hashFiles('engine/cli/**', 'engine/build-macos.sh', 'engine/VERSIONS') }}-v1
+
+      - name: Werkzeuge
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        run: brew install autoconf automake libtool texinfo
+
+      - uses: lukka/get-cmake@v4.5.1
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        with:
+          cmakeVersion: "~3.31.0"
+
+      - name: Abhängigkeiten aus dem Cache
+        id: deps-cache
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/build/orca-desktop/deps/build/${{ steps.engine.outputs.arch }}/OrcaSlicer_dep
+          key: orca-deps-macos-${{ steps.engine.outputs.arch }}-${{ env.OSX_DEPLOYMENT_TARGET }}-${{ steps.engine.outputs.commit }}-v1
+
+      - name: Engine bauen
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        run: |
+          if [[ "${{ steps.deps-cache.outputs.cache-hit }}" == true ]]; then
+            ENGINE_SKIP_DEPS=1 engine/build-macos.sh
+          else
+            engine/build-macos.sh
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: App und DMG bauen
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build macos --release
+          APP="build/macos/Build/Products/Release/Mobile Slice.app"
+          test -x "$APP/Contents/Resources/engine/slicer_cli"
+          codesign --verify --deep --strict "$APP"
+          STAGE="$RUNNER_TEMP/dmg"
+          mkdir -p "$STAGE" "$RUNNER_TEMP/dist"
+          ditto "$APP" "$STAGE/Mobile Slice.app"
+          ln -s /Applications "$STAGE/Programme"
+          hdiutil create -volname "Mobile Slice" -srcfolder "$STAGE" -ov -format UDZO \
+            "$RUNNER_TEMP/dist/Mobile-Slice-${RELEASE_TAG#v}-macOS-AppleSilicon.dmg"
+          hdiutil verify "$RUNNER_TEMP/dist/"*.dmg
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: ${{ runner.temp }}/dist/*.dmg
+          retention-days: 7
+
+  release:
+    needs: [windows, android, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/* --prerelease --target "$GITHUB_SHA" \
+              --title "Mobile Slice ${RELEASE_TAG#v}" --notes-file packaging/release-notes.md
+          fi
