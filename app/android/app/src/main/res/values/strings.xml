@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_printer_description">Status, Fortschritt und Fertigzeit deines Druckers</string>
+    <string name="widget_workshop_description">Drucke, Filament, Trophäen und ein Knopf zum Öffnen eines Modells</string>
+    <string name="shortcut_open_model">Modell öffnen</string>
+    <string name="shortcut_printer">Drucker</string>
+    <string name="shortcut_history">Verlauf</string>
+    <string name="shortcut_trophies">Trophäen</string>
+</resources>

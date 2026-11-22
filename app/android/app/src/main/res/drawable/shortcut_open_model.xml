@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pixel glyph on the app's dark background, drawn on a 16x16 grid. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FF1B1B2F" android:pathData="M0,0h24v24h-24z" />
+    <path android:fillColor="#FFFF8A3D" android:pathData="M5,7h5v1h9v9h-14z M6,10h12v6h-12z" />
+</vector>

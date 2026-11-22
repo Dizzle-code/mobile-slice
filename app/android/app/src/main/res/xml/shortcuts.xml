@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_open_model"
+        android:shortcutId="open_model"
+        android:shortcutShortLabel="@string/shortcut_open_model">
+        <intent
+            android:action="com.mobileslice.mobile_slice.launch.open_model"
+            android:targetClass="com.mobileslice.mobile_slice.MainActivity"
+            android:targetPackage="com.mobileslice.mobile_slice" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_printer"
+        android:shortcutId="printer"
+        android:shortcutShortLabel="@string/shortcut_printer">
+        <intent
+            android:action="com.mobileslice.mobile_slice.launch.printer"
+            android:targetClass="com.mobileslice.mobile_slice.MainActivity"
+            android:targetPackage="com.mobileslice.mobile_slice" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_history"
+        android:shortcutId="history"
+        android:shortcutShortLabel="@string/shortcut_history">
+        <intent
+            android:action="com.mobileslice.mobile_slice.launch.history"
+            android:targetClass="com.mobileslice.mobile_slice.MainActivity"
+            android:targetPackage="com.mobileslice.mobile_slice" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_trophies"
+        android:shortcutId="trophies"
+        android:shortcutShortLabel="@string/shortcut_trophies">
+        <intent
+            android:action="com.mobileslice.mobile_slice.launch.trophies"
+            android:targetClass="com.mobileslice.mobile_slice.MainActivity"
+            android:targetPackage="com.mobileslice.mobile_slice" />
+    </shortcut>
+</shortcuts>

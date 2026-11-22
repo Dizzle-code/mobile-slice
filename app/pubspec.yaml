@@ -1,0 +1,41 @@
+name: mobile_slice
+description: "Pixel-Slicer für den Bambu Lab P1S."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  file_selector: 1.1.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: false
+  assets:
+    - assets/engine/models/
+    - assets/engine/profiles/
+    - assets/engine/profiles/process/
+    - assets/engine/profiles/filament/
+    - assets/engine/resources/info/
+    - assets/fonts/OFL.txt
+    - assets/fonts/OFL-AtkinsonHyperlegible.txt
+
+  # Pixelify Sans (SIL Open Font License 1.1), license text in assets/fonts/OFL.txt
+  # Atkinson Hyperlegible (SIL Open Font License 1.1), license text in assets/fonts/OFL-AtkinsonHyperlegible.txt
+  fonts:
+    - family: PixelifySans
+      fonts:
+        - asset: assets/fonts/PixelifySans.ttf
+    - family: AtkinsonHyperlegible
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegible-Regular.ttf
+        - asset: assets/fonts/AtkinsonHyperlegible-Bold.ttf
+          weight: 700

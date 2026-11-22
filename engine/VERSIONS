@@ -1,0 +1,8 @@
+# Pinned inputs for engine/build-android.sh (sourced as shell variables).
+# OrcaXR (AGPL-3.0): Android build recipe and patches, https://github.com/ignacio82/OrcaXR
+ORCAXR_COMMIT=38a5674a61a6d9c9774b6c7bb1baf13e981e0a54
+# Snapmaker fork of OrcaSlicer (AGPL-3.0), the engine OrcaXR pins, https://github.com/Snapmaker/OrcaSlicer
+ENGINE_COMMIT=9fd12ffb2b1b80c9fb4c14564754d2ec1573a626
+# Android NDK r29, required exactly by the OrcaXR recipe (clang 21.0.0)
+NDK_VERSION=29.0.14206865
+# Printer, process and filament profiles bundled with the app: engine/profile_selection.json
