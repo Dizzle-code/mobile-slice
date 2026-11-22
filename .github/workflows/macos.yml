@@ -27,6 +27,11 @@ jobs:
       - name: Werkzeuge
         run: brew install autoconf automake libtool texinfo
 
+      # Boost and other pinned dependencies do not configure with CMake 4.
+      - uses: lukka/get-cmake@v4.5.1
+        with:
+          cmakeVersion: "~3.31.0"
+
       - name: Engine-Version
         id: engine
         run: |
