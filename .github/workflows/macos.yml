@@ -39,27 +39,45 @@ jobs:
           echo "commit=$ENGINE_COMMIT" >> "$GITHUB_OUTPUT"
           echo "arch=$(uname -m)" >> "$GITHUB_OUTPUT"
 
+      # The finished engine (slicer_cli + dylibs) only changes with the engine sources, the build script or the pinned
+      # versions. App-only changes reuse it and skip the whole engine build.
+      - name: Engine aus dem Cache
+        id: engine-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: app/macos/engine
+          key: slicer-cli-macos-${{ steps.engine.outputs.arch }}-${{ env.OSX_DEPLOYMENT_TARGET }}-${{ steps.engine.outputs.commit }}-${{ hashFiles('engine/cli/**', 'engine/build-macos.sh', 'engine/VERSIONS') }}-v1
+
       # Only the installed dependency prefix is cached; it depends on the engine commit, not on app code.
       - name: Abhängigkeiten aus dem Cache
         id: deps-cache
+        if: steps.engine-cache.outputs.cache-hit != 'true'
         uses: actions/cache/restore@v6
         with:
           path: ~/build/orca-desktop/deps/build/${{ steps.engine.outputs.arch }}/OrcaSlicer_dep
           key: orca-deps-macos-${{ steps.engine.outputs.arch }}-${{ env.OSX_DEPLOYMENT_TARGET }}-${{ steps.engine.outputs.commit }}-v1
 
       - name: Abhängigkeiten bauen
-        if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: steps.engine-cache.outputs.cache-hit != 'true' && steps.deps-cache.outputs.cache-hit != 'true'
         run: ENGINE_ONLY_DEPS=1 engine/build-macos.sh
 
       - name: Abhängigkeiten cachen
-        if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: steps.engine-cache.outputs.cache-hit != 'true' && steps.deps-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ~/build/orca-desktop/deps/build/${{ steps.engine.outputs.arch }}/OrcaSlicer_dep
           key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
       - name: Engine bauen
+        if: steps.engine-cache.outputs.cache-hit != 'true'
         run: ENGINE_SKIP_DEPS=1 engine/build-macos.sh
+
+      - name: Engine cachen
+        if: steps.engine-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: app/macos/engine
+          key: ${{ steps.engine-cache.outputs.cache-primary-key }}
 
       - uses: subosito/flutter-action@v2
         with:
