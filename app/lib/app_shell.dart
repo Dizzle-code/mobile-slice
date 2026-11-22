@@ -9,6 +9,7 @@ import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/printer_screen.dart';
 import 'screens/trophies_screen.dart';
+import 'screens/workspace_screen.dart';
 import 'ui/pixel_button.dart';
 import 'ui/pixel_icon.dart';
 import 'trophies/trophy_catalog.dart';
@@ -32,7 +33,29 @@ class AppShell extends StatefulWidget {
 
 class AppShellState extends State<AppShell> {
   int _index = 0;
-  final _navigators = List.generate(4, (_) => GlobalKey<NavigatorState>());
+  final _navigators = List.generate(5, (_) => GlobalKey<NavigatorState>());
+  final _workspace = GlobalKey<WorkspaceScreenState>();
+
+  /// Index of the workspace area; only the desktop layout shows it as its own area.
+  static const workspaceTab = 4;
+  bool _desktop = false;
+
+  bool get hasWorkspaceTab => _desktop;
+
+  /// Desktop: switches to the workspace and adds [model] to the current plate.
+  Future<void> openWorkspace(PickedModel model) async {
+    setState(() => _index = workspaceTab);
+    await WidgetsBinding.instance.endOfFrame;
+    final workspace = _workspace.currentState;
+    if (workspace != null) {
+      await workspace.addModel(model);
+    } else {
+      _pendingModels.add(model);
+      if (mounted) setState(() {});
+    }
+  }
+
+  final _pendingModels = <PickedModel>[];
   late Future<void> _ready = widget.services.init();
   StreamSubscription<void>? _launchSub;
   bool _started = false;
@@ -94,7 +117,28 @@ class AppShellState extends State<AppShell> {
     PixelTabItem(PixelIcons.trophy, 'Trophäen'),
   ];
 
-  static const _roots = <Widget>[HomeScreen(), PrinterScreen(), HistoryScreen(), TrophiesScreen()];
+  /// Desktop sidebar order: start, workspace, printer, history, trophies (values are area indices).
+  static final _sideTabs = [
+    (0, PixelTabItem(PixelIcons.hammer, 'Start')),
+    (workspaceTab, PixelTabItem(PixelIcons.cube, 'Vorbereiten')),
+    (1, PixelTabItem(PixelIcons.printer, 'Drucker')),
+    (2, PixelTabItem(PixelIcons.clock, 'Verlauf')),
+    (3, PixelTabItem(PixelIcons.trophy, 'Trophäen')),
+  ];
+
+  Widget _root(int i) => switch (i) {
+        0 => const HomeScreen(),
+        1 => const PrinterScreen(),
+        2 => const HistoryScreen(),
+        3 => const TrophiesScreen(),
+        _ => WorkspaceScreen(key: _workspace, initial: _takePending()),
+      };
+
+  List<PickedModel> _takePending() {
+    final models = List.of(_pendingModels);
+    _pendingModels.clear();
+    return models;
+  }
 
   int get index => _index;
 
@@ -121,46 +165,71 @@ class AppShellState extends State<AppShell> {
   }
 
   Widget _tabsView() {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        final navigator = _navigators[_index].currentState;
-        if (navigator != null && navigator.canPop()) {
-          navigator.maybePop();
-        } else if (_index != 0) {
-          setState(() => _index = 0);
-        } else {
-          SystemNavigator.pop();
+    return LayoutBuilder(builder: (context, constraints) {
+      final desktop = constraints.maxWidth >= desktopBreakpoint;
+      if (desktop != _desktop) {
+        _desktop = desktop;
+        // Leaving the desktop layout: the workspace area is not reachable from the tab bar.
+        if (!desktop && _index == workspaceTab) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _index = 0);
+          });
         }
-      },
-      child: ColoredBox(
-        color: PixelColors.background,
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _index,
-                children: [
-                  for (var i = 0; i < _roots.length; i++)
-                    TickerMode(
-                      enabled: i == _index,
-                      child: Navigator(
-                        key: _navigators[i],
-                        onGenerateRoute: (settings) => PageRouteBuilder<void>(
-                          settings: settings,
-                          pageBuilder: (_, _, _) => _roots[i],
-                        ),
+      }
+      final areas = IndexedStack(
+        index: _index,
+        children: [
+          for (var i = 0; i < _navigators.length; i++)
+            TickerMode(
+              enabled: i == _index,
+              child: i == workspaceTab && !desktop
+                  ? const SizedBox.shrink()
+                  : Navigator(
+                      key: _navigators[i],
+                      onGenerateRoute: (settings) => PageRouteBuilder<void>(
+                        settings: settings,
+                        pageBuilder: (_, _, _) => _root(i),
                       ),
                     ),
-                ],
-              ),
             ),
-            PixelTabBar(items: _tabs, index: _index, onSelected: select),
-          ],
+        ],
+      );
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          final navigator = _navigators[_index].currentState;
+          if (navigator != null && navigator.canPop()) {
+            navigator.maybePop();
+          } else if (_index != 0) {
+            setState(() => _index = 0);
+          } else {
+            SystemNavigator.pop();
+          }
+        },
+        child: ColoredBox(
+          color: PixelColors.background,
+          child: desktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PixelSideBar(
+                      items: [for (final (_, item) in _sideTabs) item],
+                      index: _sideTabs.indexWhere((t) => t.$1 == _index),
+                      onSelected: (i) => select(_sideTabs[i].$1),
+                    ),
+                    Expanded(child: areas),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Expanded(child: areas),
+                    PixelTabBar(items: _tabs, index: _index.clamp(0, _tabs.length - 1), onSelected: select),
+                  ],
+                ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _failed(Object error) => ColoredBox(

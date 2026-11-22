@@ -6,7 +6,7 @@ import 'package:mobile_slice/data/print_history.dart';
 import 'package:mobile_slice/engine/slicer_channel.dart';
 import 'package:mobile_slice/model/stl_reader.dart';
 import 'package:mobile_slice/printer/printer_status.dart';
-import 'package:mobile_slice/screens/model_screen.dart';
+import 'package:mobile_slice/screens/workspace_screen.dart';
 import 'package:mobile_slice/ui/pixel_button.dart';
 
 import '../data/history_test.dart' show outcome;
@@ -77,24 +77,28 @@ void main() {
   });
 
   testWidgets('Werkstatt: Testwürfel, zuletzt geöffnet, Einstellungen', (tester) async {
-    useLargeScreen(tester);
+    tester.view.physicalSize = const Size(480, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final services = await pumpApp(tester, platform);
     await tester.tap(find.text('Testwürfel ausprobieren'));
-    await settleFinder(tester, find.byType(ModelScreen));
+    await settleFinder(tester, find.byType(WorkspaceScreen));
     await settle(tester, until: () => platform.jobs.isNotEmpty);
     expect(platform.jobs.last['model'], endsWith('engine/models/test_cube.stl'));
     expect(services.recent.models.value, isEmpty, reason: 'Beispielmodell nicht in der Liste');
-    Navigator.of(tester.element(find.byType(ModelScreen))).pop();
-    await settle(tester, until: () => find.byType(ModelScreen, skipOffstage: false).evaluate().isEmpty);
+    await settle(tester, until: () => services.project.plate.objects.length == 1);
+    Navigator.of(tester.element(find.byType(WorkspaceScreen))).pop();
+    await settle(tester, until: () => find.byType(WorkspaceScreen, skipOffstage: false).evaluate().isEmpty);
 
     final dir = Directory('${platform.appDir.path}/models')..createSync();
     final file = File('${dir.path}/1_teil.stl')..writeAsBytesSync(writeBinaryStl(box(0, 0, 0, 5, 5, 5)));
     platform.nextPick = {'path': file.path, 'name': 'teil.stl', 'bytes': 84 + 12 * 50};
     await tester.tap(find.text('Modell öffnen'));
-    await settleFinder(tester, find.byType(ModelScreen));
+    await settleFinder(tester, find.byType(WorkspaceScreen));
     expect(services.recent.models.value.single.name, 'teil.stl');
-    Navigator.of(tester.element(find.byType(ModelScreen))).pop();
-    await settle(tester, until: () => find.byType(ModelScreen, skipOffstage: false).evaluate().isEmpty);
+    await settle(tester, until: () => services.project.plate.objects.length == 2);
+    Navigator.of(tester.element(find.byType(WorkspaceScreen))).pop();
+    await settle(tester, until: () => find.byType(WorkspaceScreen, skipOffstage: false).evaluate().isEmpty);
     expect(find.text('teil.stl'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));

@@ -232,7 +232,8 @@ class DesktopSlicer extends SlicerChannel {
     // Profiles and outputs must stay inside the app's own storage.
     final profiles = _join(engineDir, 'profiles');
     final allowedProfile = [job.process, job.filament].nonNulls.every((p) => _inside(_join(profiles, p), engineDir));
-    if (!allowedProfile || !_inside(job.outputDir, appDir)) {
+    final plate = job.plate;
+    if (!allowedProfile || !_inside(job.outputDir, appDir) || (plate != null && !_inside(plate, appDir))) {
       throw PlatformException(code: 'invalid', message: 'Ungültiger Pfad im Auftrag');
     }
     _running = true;
@@ -259,9 +260,14 @@ class DesktopSlicer extends SlicerChannel {
     final args = [
       '--resources', _join(engineDir, 'resources'),
       '--printer', _join(profiles, 'printer.json'),
-      '--model', job.model,
     ];
-    if (job.scale != 1.0) args.addAll(['--scale', job.scale.toString()]);
+    final plate = job.plate;
+    if (plate != null) {
+      args.addAll(['--plate', plate]);
+    } else {
+      args.addAll(['--model', job.model]);
+      if (job.scale != 1.0) args.addAll(['--scale', job.scale.toString()]);
+    }
     if (job.type == EngineJobType.preview) {
       final stl = _join(job.outputDir, 'preview.stl');
       args.addAll(['--preview', stl]);

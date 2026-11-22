@@ -12,6 +12,73 @@ class PixelTabItem {
   final String label;
 }
 
+/// Desktop navigation down the left edge, same look as [PixelTabBar].
+class PixelSideBar extends StatelessWidget {
+  const PixelSideBar({super.key, required this.items, required this.index, required this.onSelected});
+
+  final List<PixelTabItem> items;
+
+  /// -1 when no item is selected.
+  final int index;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 96,
+      decoration: const BoxDecoration(
+        color: PixelColors.panel,
+        border: Border(right: BorderSide(color: PixelColors.shadow, width: PixelTheme.unit)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          for (var i = 0; i < items.length; i++) _item(i),
+        ],
+      ),
+    );
+  }
+
+  Widget _item(int i) {
+    final selected = i == index;
+    final item = items[i];
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: item.label,
+      excludeSemantics: true,
+      onTap: () => onSelected(i),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelected(i),
+          child: Container(
+            height: 76,
+            decoration: BoxDecoration(
+              color: selected ? PixelColors.background : null,
+              border: Border(left: BorderSide(color: selected ? PixelColors.accent : PixelColors.panel, width: PixelTheme.unit)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                PixelIcon(
+                  item.glyph,
+                  scale: 2,
+                  color: selected ? PixelColors.text : PixelColors.muted,
+                  secondColor: selected ? PixelColors.accent : PixelColors.muted,
+                ),
+                const SizedBox(height: 4),
+                PixelText.small(item.label, color: selected ? PixelColors.accent : PixelColors.muted, maxLines: 1),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Bottom navigation; the selected icon hops up once when chosen.
 class PixelTabBar extends StatelessWidget {
   const PixelTabBar({super.key, required this.items, required this.index, required this.onSelected});

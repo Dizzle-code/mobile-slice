@@ -1,6 +1,8 @@
 // Standalone slicer for Android, Windows and macOS: STL/3MF + flattened Bambu profiles -> G-code and .gcode.3mf.
 // Protocol: lines prefixed with "@@" on stderr/stdout are JSON events for the app.
 // Modes: with --preview <stl> it only places the model and writes it as binary STL; otherwise it slices.
+// Input: --model <file> (one model, centered, optional --scale) or --plate <json> (several placed objects:
+// {"objects":[{"model":path,"x":mm,"y":mm,"rotX":deg,"rotY":deg,"rotZ":deg,"scale":f}]}).
 #include <boost/log/core.hpp>
 #include <nlohmann/json.hpp>
 #include <oneapi/tbb/task_arena.h>
@@ -8,11 +10,14 @@
 #include <cstdio>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <map>
+#include <vector>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include "libslic3r/BoundingBox.hpp"
+#include "libslic3r/Exception.hpp"
 #include "libslic3r/Format/STL.hpp"
 #include "libslic3r/Format/bbs_3mf.hpp"
 #include "libslic3r/GCode/GCodeProcessor.hpp"
@@ -215,6 +220,114 @@ LoadedModel load_model(const fs::path& model_path, const Slic3r::DynamicPrintCon
     return loaded;
 }
 
+// One object of a plate: a model file placed with its own rotation, scale and position.
+struct PlateItem {
+    fs::path model;
+    double x = 0, y = 0;             // bed position of the footprint center (mm)
+    double rot_x = 0, rot_y = 0, rot_z = 0; // degrees, applied X, then Y, then Z
+    double scale = 1;
+};
+
+double json_number(const json& item, const char* key, double fallback) {
+    if (!item.contains(key)) return fallback;
+    if (!item[key].is_number()) throw std::runtime_error(std::string("Platte: ") + key + " muss eine Zahl sein");
+    return item[key].get<double>();
+}
+
+std::vector<PlateItem> read_plate(const fs::path& path) {
+    std::ifstream file(path);
+    if (!file) throw std::runtime_error("Plattendatei fehlt: " + path.string());
+    const json plate = json::parse(file);
+    if (!plate.contains("objects") || !plate["objects"].is_array() || plate["objects"].empty())
+        throw std::runtime_error("Die Platte enthält keine Objekte");
+    std::vector<PlateItem> items;
+    for (const auto& entry : plate["objects"]) {
+        PlateItem item;
+        if (!entry.contains("model") || !entry["model"].is_string()) throw std::runtime_error("Platte: model fehlt");
+        item.model = fs::u8path(entry["model"].get<std::string>());
+        item.x = json_number(entry, "x", 0);
+        item.y = json_number(entry, "y", 0);
+        item.rot_x = json_number(entry, "rotX", 0);
+        item.rot_y = json_number(entry, "rotY", 0);
+        item.rot_z = json_number(entry, "rotZ", 0);
+        item.scale = json_number(entry, "scale", 1);
+        if (!(item.scale >= 0.01 && item.scale <= 100.0)) throw std::runtime_error("Platte: scale muss zwischen 0.01 und 100 liegen");
+        items.push_back(item);
+    }
+    return items;
+}
+
+// Loads every plate object like load_model (geometry only, each object set on the bed), then turns and
+// scales it around its bounding box center, sets it on the bed and moves its footprint center to x/y.
+// The app's preview applies the same steps, so what it shows is what gets sliced.
+LoadedModel load_plate(const fs::path& plate_path, const Slic3r::DynamicPrintConfig& config) {
+    set_stage("load_model");
+    const auto load_start = Clock::now();
+    const auto items = read_plate(plate_path);
+    LoadedModel loaded;
+    auto& plate = loaded.model;
+    std::map<std::string, Slic3r::Model> cache;
+    for (const auto& item : items) {
+        const std::string key = item.model.string();
+        if (!cache.count(key)) {
+            if (!fs::is_regular_file(item.model)) throw std::runtime_error("Modell fehlt: " + key);
+            auto source = Slic3r::Model::read_from_file(key, nullptr, nullptr,
+                Slic3r::LoadStrategy::LoadModel | Slic3r::LoadStrategy::AddDefaultInstances);
+            if (source.objects.empty()) throw std::runtime_error("Modell enthält keine Objekte: " + item.model.filename().string());
+            for (auto* object : source.objects) object->ensure_on_bed();
+            cache.emplace(key, std::move(source));
+        }
+        const auto& source = cache.at(key);
+        const auto pivot = source.bounding_box_exact().center();
+        const Slic3r::Transform3d turn = Slic3r::Transform3d::Identity() *
+            Eigen::AngleAxisd(item.rot_z * M_PI / 180, Slic3r::Vec3d::UnitZ()) *
+            Eigen::AngleAxisd(item.rot_y * M_PI / 180, Slic3r::Vec3d::UnitY()) *
+            Eigen::AngleAxisd(item.rot_x * M_PI / 180, Slic3r::Vec3d::UnitX()) *
+            Eigen::Scaling(item.scale) *
+            Eigen::Translation3d(-pivot);
+        std::vector<Slic3r::ModelObject*> added;
+        for (const auto* object : source.objects) {
+            auto* copy = plate.add_object(*object);
+            for (auto* instance : copy->instances) instance->set_transformation(Slic3r::Geometry::Transformation(Slic3r::Transform3d(turn * instance->get_matrix())));
+            copy->invalidate_bounding_box();
+            added.push_back(copy);
+        }
+        Slic3r::BoundingBoxf3 box;
+        for (const auto* object : added)
+            for (size_t i = 0; i < object->instances.size(); ++i) box.merge(object->instance_bounding_box(i));
+        const Slic3r::Vec3d shift(item.x - box.center().x(), item.y - box.center().y(), -box.min.z());
+        for (auto* object : added) {
+            for (auto* instance : object->instances) instance->set_offset(instance->get_offset() + shift);
+            object->invalidate_bounding_box();
+            for (const auto* volume : object->volumes)
+                if (volume->is_model_part()) loaded.triangles += volume->mesh().facets_count();
+        }
+    }
+    loaded.bounds = plate.bounding_box_exact();
+    const auto bed = bed_of(config);
+    const double height = config.opt_float("printable_height");
+    constexpr double eps = 0.01;
+    loaded.fits = true;
+    for (const auto* object : plate.objects) {
+        for (size_t i = 0; i < object->instances.size(); ++i) {
+            const auto b = object->instance_bounding_box(i);
+            if (b.min.x() < bed.min.x() - eps || b.min.y() < bed.min.y() - eps || b.max.x() > bed.max.x() + eps ||
+                b.max.y() > bed.max.y() + eps || b.max.z() > height + eps)
+                loaded.fits = false;
+        }
+    }
+    loaded.load_ms = elapsed_ms(load_start);
+    const auto size = loaded.bounds.size();
+    emit({{"model", {{"objects", plate.objects.size()}, {"plateItems", items.size()}, {"triangles", loaded.triangles},
+        {"loadMs", loaded.load_ms}, {"size", {size.x(), size.y(), size.z()}}, {"fits", loaded.fits}}}});
+    return loaded;
+}
+
+LoadedModel load_input(const Args& args, const Slic3r::DynamicPrintConfig& config) {
+    if (args.has("plate")) return load_plate(args.get("plate"), config);
+    return load_model(args.get("model"), config, scale_of(args));
+}
+
 json bounds_json(const Slic3r::BoundingBoxf3& box) {
     return {{"min", {box.min.x(), box.min.y(), box.min.z()}}, {"max", {box.max.x(), box.max.y(), box.max.z()}}};
 }
@@ -227,7 +340,7 @@ json preview(const Args& args) {
     set_stage("profiles");
     Slic3r::ConfigSubstitutionContext substitutions(Slic3r::ForwardCompatibilitySubstitutionRule::Enable);
     const auto config = load_config(args, substitutions, false);
-    auto loaded = load_model(args.get("model"), config, scale_of(args));
+    auto loaded = load_input(args, config);
     set_stage("export");
     if (!Slic3r::store_stl(output.string().c_str(), &loaded.model, true) || !fs::is_regular_file(output))
         throw std::runtime_error("Vorschau-STL konnte nicht geschrieben werden");
@@ -306,9 +419,10 @@ json slice(const Args& args) {
     Slic3r::ConfigSubstitutionContext substitutions(Slic3r::ForwardCompatibilitySubstitutionRule::Enable);
     auto config = load_config(args, substitutions, true);
 
-    auto loaded = load_model(args.get("model"), config, scale_of(args));
+    auto loaded = load_input(args, config);
     auto& model = loaded.model;
     if (!loaded.fits) {
+        if (args.has("plate")) throw std::runtime_error("Mindestens ein Objekt liegt nicht vollständig auf dem Druckbett");
         const auto size = loaded.bounds.size();
         char text[160];
         std::snprintf(text, sizeof text, "Modell passt nicht auf das Druckbett (%.0f x %.0f x %.0f mm)",
@@ -389,6 +503,12 @@ int main(int argc, char** argv) {
         auto result = args.has("preview") ? preview(args) : slice(args);
         emit({{"result", result}});
         return 0;
+    } catch (const Slic3r::SlicingErrors& e) {
+        // "Errors" alone tells nobody anything; the single messages are what the user needs.
+        std::string text;
+        for (const auto& error : e.errors_) text += (text.empty() ? "" : "; ") + std::string(error.what());
+        emit({{"error", text.empty() ? std::string(e.what()) : text}, {"stage", g_stage}, {"maxRssKb", max_rss_kb()}});
+        return 1;
     } catch (const std::exception& e) {
         emit({{"error", e.what()}, {"stage", g_stage}, {"maxRssKb", max_rss_kb()}});
         return 1;

@@ -20,7 +20,7 @@ import '../ui/pixel_text.dart';
 import '../ui/pixel_theme.dart';
 import '../ui/stat_tile.dart';
 import '../util/format.dart';
-import 'model_screen.dart';
+import 'workspace_screen.dart';
 import 'settings_screen.dart';
 
 /// "Werkstatt": open a model, reopen a recent one, glance at the printer.
@@ -38,11 +38,17 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+  /// Adds [model] to the open project and shows the workspace.
   static Future<void> open(BuildContext context, PickedModel model) async {
     final services = AppScope.of(context);
     if (model.path.startsWith(services.recent.modelsDir.path)) await services.recent.add(model);
     if (!context.mounted) return;
-    await Navigator.of(context).push(PixelRoute<void>(builder: (_) => ModelScreen(model: model)));
+    final shell = AppShellState.maybeOf(context);
+    if (shell != null && shell.hasWorkspaceTab) {
+      await shell.openWorkspace(model);
+      return;
+    }
+    await Navigator.of(context).push(PixelRoute<void>(builder: (_) => WorkspaceScreen(initial: [model])));
   }
 
   @override

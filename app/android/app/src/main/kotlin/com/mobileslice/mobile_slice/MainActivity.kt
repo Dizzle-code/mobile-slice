@@ -162,6 +162,7 @@ class MainActivity : FlutterActivity() {
                 overrides = call.argument<String>("overrides"),
                 modelId = call.argument<String>("modelId"),
                 scale = call.argument<Double>("scale"),
+                plate = call.argument<String>("plate")?.let { File(it) },
             )
         } catch (e: NullPointerException) {
             result.error("invalid", "Unvollständiger Auftrag", null)
@@ -172,7 +173,8 @@ class MainActivity : FlutterActivity() {
         val allowedProfile = listOfNotNull(job.process, job.filament).all {
             File(File(profiles, "profiles"), it).canonicalPath.startsWith(profiles.path + File.separator)
         }
-        if (!allowedProfile || !job.outputDir.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
+        val inFiles = { f: File -> f.canonicalPath.startsWith(filesDir.canonicalPath + File.separator) }
+        if (!allowedProfile || !inFiles(job.outputDir) || (job.plate != null && !inFiles(job.plate))) {
             result.error("invalid", "Ungültiger Pfad im Auftrag", null)
             return
         }

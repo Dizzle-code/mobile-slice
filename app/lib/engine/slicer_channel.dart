@@ -63,7 +63,11 @@ class EngineJob {
     this.overrides = const {},
     this.modelId,
     this.scale = 1.0,
+    this.plate,
   }) : id = '${type.name}-${DateTime.now().microsecondsSinceEpoch}';
+
+  /// Path of a plate JSON file (several placed objects); when set, the engine ignores [model] and [scale].
+  final String? plate;
 
   final String id;
   final EngineJobType type;
@@ -91,6 +95,7 @@ class EngineJob {
         if (overrides.isNotEmpty) 'overrides': jsonEncode(overrides),
         'modelId': modelId,
         if (scale != 1.0) 'scale': scale,
+        if (plate != null) 'plate': plate,
       };
 }
 

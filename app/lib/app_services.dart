@@ -13,6 +13,9 @@ import 'engine/profile_catalog.dart';
 import 'engine/profile_values.dart';
 import 'engine/slice_settings.dart';
 import 'engine/slicer_channel.dart';
+import 'model/mesh.dart';
+import 'model/plate_project.dart';
+import 'model/stl_reader.dart';
 import 'printer/bambu_printer.dart';
 import 'printer/printer_config.dart';
 import 'trophies/trophy_catalog.dart';
@@ -51,6 +54,38 @@ class AppServices {
   late TrophyEngine trophies;
   HomeWidgetSync? _widgets;
   late RecentModels recent;
+
+  /// The open slicer project (plates and objects); lives as long as the app.
+  late final PlateProject project = PlateProject(
+    bed: PlateSize(catalog.printer.bedX, catalog.printer.bedY, catalog.printer.height),
+  );
+
+  final _sources = <String, Future<ModelSource>>{};
+
+  /// Loads a model once through the engine's preview (geometry as the engine places it), cached by path.
+  Future<ModelSource> loadSource(PickedModel model) async {
+    final pending = _sources[model.path] ??= _loadSource(model);
+    try {
+      return await pending;
+    } catch (_) {
+      // A failed load must be retryable.
+      _sources.remove(model.path);
+      rethrow;
+    }
+  }
+
+  Future<ModelSource> _loadSource(PickedModel model) async {
+    final dir = await newJobDir('preview-${DateTime.now().microsecondsSinceEpoch}');
+    try {
+      final result = await slicer.run(EngineJob(type: EngineJobType.preview, model: model.path, label: model.name, outputDir: dir.path));
+      final path = result.previewPath;
+      if (!result.ok || path == null) throw Exception(result.failure);
+      final triangles = await readStlInBackground(await File(path).readAsBytes());
+      return ModelSource(path: model.path, name: model.name, mesh: Mesh(triangles), bytes: model.bytes);
+    } finally {
+      unawaited(dir.delete(recursive: true).then((_) {}, onError: (Object _) {}));
+    }
+  }
 
   /// Trophies earned just now (for the pop-up).
   final newTrophies = StreamController<Trophy>.broadcast();

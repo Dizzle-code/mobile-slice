@@ -2,6 +2,16 @@
 
 Pixel-Slicer für den Bambu Lab P1S. Läuft auf Android, Windows und macOS.
 
+## Arbeitsplatz (Platten und Objekte)
+
+- Ein Projekt hat beliebig viele **Platten**. Jede Platte trägt beliebig viele **Objekte**, jedes mit eigener Position, Drehung (X/Y/Z) und Größe.
+- **Desktop** (Fenster ab 1000 px Breite): Seitenleiste links, im Bereich „Vorbereiten“ Platten- und Objektliste, 3D-Ansicht der Platte und rechts Objekt- und Druckeinstellungen.
+- **3D-Ansicht:** Objekt ziehen verschiebt es. Freie Fläche ziehen dreht die Ansicht. Rechte oder mittlere Maustaste verschiebt die Ansicht, das Mausrad zoomt, Doppelklick setzt sie zurück.
+- **Tasten:** Pfeiltasten 1 mm (mit Umschalt 10 mm), Entf löschen, Strg+D Kopie, A anordnen, Strg+Z / Strg+Y rückgängig / wiederholen, Strg+O Modell hinzufügen.
+- **Anordnen** packt alle Objekte ohne Überlappung auf die Platte. Was nicht passt, kommt auf neue Platten. **Flach legen** dreht die größte ebene Fläche nach unten.
+- **Slicen** gilt immer für die gewählte Platte. Die Engine bekommt die Platte als JSON (`--plate`, Aufbau siehe `engine/cli/slicer_cli.cpp`) und platziert die Objekte genau wie die Vorschau.
+- **Handy:** dieselben Funktionen untereinander, Platten als Reiter über der 3D-Ansicht.
+
 ## Engine bauen
 
 Die Slicer-Engine (`engine/cli/slicer_cli.cpp` auf Basis von OrcaSlicer, Snapmaker-Fork) wird je Plattform einmal gebaut:

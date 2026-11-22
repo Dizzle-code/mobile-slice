@@ -66,11 +66,11 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
     case WM_GETMINMAXINFO: {
-      // The layout is made for phones; below this it gets cramped.
+      // Narrower windows fall back to the phone layout; below this even that gets cramped.
       const UINT dpi = ::GetDpiForWindow(hwnd);
       auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
-      info->ptMinTrackSize.x = ::MulDiv(380, dpi, 96);
-      info->ptMinTrackSize.y = ::MulDiv(560, dpi, 96);
+      info->ptMinTrackSize.x = ::MulDiv(420, dpi, 96);
+      info->ptMinTrackSize.y = ::MulDiv(600, dpi, 96);
       return 0;
     }
   }

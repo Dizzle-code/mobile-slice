@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_slice/app_shell.dart';
 import 'package:mobile_slice/engine/slicer_channel.dart';
 import 'package:mobile_slice/model/stl_reader.dart';
-import 'package:mobile_slice/screens/model_screen.dart';
+import 'package:mobile_slice/screens/workspace_screen.dart';
 
 import '../model/model_test.dart' show box;
 import '../support/fake_platform.dart';
@@ -50,11 +50,12 @@ void main() {
     final dir = Directory('${platform.appDir.path}/models')..createSync();
     final file = File('${dir.path}/1_benchy.stl')..writeAsBytesSync(writeBinaryStl(box(0, 0, 0, 5, 5, 5)));
     platform.launch({'type': 'file', 'path': file.path, 'name': 'benchy.stl', 'bytes': 684});
-    await settleFinder(tester, find.byType(ModelScreen));
+    await settleFinder(tester, find.byType(WorkspaceScreen));
     expect(tab(tester), 0);
     expect(services.recent.models.value.single.name, 'benchy.stl');
     await settle(tester, until: () => platform.jobs.isNotEmpty);
     expect(platform.jobs.last['model'], file.path);
+    await settle(tester, until: () => services.project.plate.objects.length == 1);
 
     platform.launch({'type': 'error', 'message': 'Bitte eine .stl- oder .3mf-Datei wählen (gewählt: bild.png)'});
     await settleFinder(tester, find.textContaining('bild.png'));
