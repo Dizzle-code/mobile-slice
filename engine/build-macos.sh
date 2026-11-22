@@ -49,9 +49,10 @@ if [[ "${ENGINE_SKIP_DEPS:-0}" != 1 ]]; then
     echo "=== 3/5 Abhängigkeiten (ohne wxWidgets, Sentry und andere reine GUI-Teile)"
     cmake -S "$WORK/deps" -B "$DEPS_BUILD" -DDESTDIR="$DEPS" -DCMAKE_BUILD_TYPE=Release -DSLIC3R_SENTRY=OFF \
         -DOPENSSL_ARCH="darwin64-$ARCH-cc" -DCMAKE_OSX_ARCHITECTURES="$ARCH" -DCMAKE_OSX_DEPLOYMENT_TARGET="$TARGET"
+    # No dep_ZLIB/dep_EXPAT: on macOS the deps build finds zlib and expat in the SDK and then defines no such targets.
     cmake --build "$DEPS_BUILD" --config Release -j"$JOBS" --target dep_Boost dep_TBB dep_OpenSSL dep_CURL dep_Cereal \
-        dep_NLopt dep_OpenVDB dep_GLEW dep_GLFW dep_OpenCV dep_CGAL dep_OCCT dep_FREETYPE dep_JPEG dep_PNG dep_ZLIB \
-        dep_EXPAT dep_libnoise dep_Qhull
+        dep_NLopt dep_OpenVDB dep_GLEW dep_GLFW dep_OpenCV dep_CGAL dep_OCCT dep_FREETYPE dep_JPEG dep_PNG \
+        dep_libnoise dep_Qhull
 fi
 if [[ "${ENGINE_ONLY_DEPS:-0}" == 1 ]]; then
     echo "=== fertig: Abhängigkeiten in $PREFIX"
