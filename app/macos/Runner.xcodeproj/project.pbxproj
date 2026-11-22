@@ -357,7 +357,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Slicer engine built by engine/build-macos.sh\nsrc=\"$PROJECT_DIR/engine\"\ndest=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/engine\"\nrm -rf \"$dest\"\nif [ -d \"$src\" ]; then\n  mkdir -p \"$dest\"\n  cp -R \"$src/\" \"$dest/\"\n  rm -f \"$dest/.gitkeep\"\n  find \"$dest\" -type f \( -name slicer_cli -o -name '*.dylib' \) -exec codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" --timestamp=none {} \;\nfi\n";
+			shellScript = "# Slicer engine built by engine/build-macos.sh\nsrc=\"$PROJECT_DIR/engine\"\ndest=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/engine\"\nrm -rf \"$dest\"\nif [ -d \"$src\" ]; then\n  mkdir -p \"$dest\"\n  cp -R \"$src/\" \"$dest/\"\n  rm -f \"$dest/.gitkeep\"\n  find \"$dest\" -type f '(' -name slicer_cli -o -name '*.dylib' ')' -exec codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" --timestamp=none '{}' ';'\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
