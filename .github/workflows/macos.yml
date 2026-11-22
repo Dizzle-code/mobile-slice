@@ -22,7 +22,7 @@ jobs:
     env:
       OSX_DEPLOYMENT_TARGET: "12.0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Werkzeuge
         run: brew install autoconf automake libtool texinfo
@@ -37,7 +37,7 @@ jobs:
       # Only the installed dependency prefix is cached; it depends on the engine commit, not on app code.
       - name: Abhängigkeiten aus dem Cache
         id: deps-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/build/orca-desktop/deps/build/${{ steps.engine.outputs.arch }}/OrcaSlicer_dep
           key: orca-deps-macos-${{ steps.engine.outputs.arch }}-${{ env.OSX_DEPLOYMENT_TARGET }}-${{ steps.engine.outputs.commit }}-v1
@@ -48,7 +48,7 @@ jobs:
 
       - name: Abhängigkeiten cachen
         if: steps.deps-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/build/orca-desktop/deps/build/${{ steps.engine.outputs.arch }}/OrcaSlicer_dep
           key: ${{ steps.deps-cache.outputs.cache-primary-key }}
@@ -77,7 +77,7 @@ jobs:
           codesign --verify --deep --strict "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/Mobile-Slice-macOS.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Mobile-Slice-macOS
           path: ${{ runner.temp }}/Mobile-Slice-macOS.zip
