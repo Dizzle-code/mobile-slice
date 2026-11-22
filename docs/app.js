@@ -5,12 +5,12 @@ const REPO = "Dizzle-code/mobile-slice";
 const RELEASES = `https://github.com/${REPO}/releases`;
 // Used when the GitHub API is unreachable or rate limited (60 requests per hour and IP).
 const FALLBACK = {
-  tag: "v1.0.0",
+  tag: "v1.1.0",
   prerelease: true,
   files: {
-    windows: "Mobile-Slice-1.0.0-Windows-Setup.exe",
-    macos: "Mobile-Slice-1.0.0-macOS-AppleSilicon.dmg",
-    android: "Mobile-Slice-1.0.0-Android-arm64.apk",
+    windows: "Mobile-Slice-1.1.0-Windows-Setup.exe",
+    macos: "Mobile-Slice-1.1.0-macOS-AppleSilicon.dmg",
+    android: "Mobile-Slice-1.1.0-Android-arm64.apk",
   },
 };
 const PATTERNS = {

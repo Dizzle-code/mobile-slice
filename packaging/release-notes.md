@@ -1,12 +1,21 @@
 Pixel-Slicer für den Bambu Lab P1S – Vorabversion.
 
+## Neu in 1.1.0
+
+- **Mehrere Druckplatten**, jede mit beliebig vielen Objekten. Geslict wird pro Platte.
+- **Objekte verschieben** per Maus, Pfeiltasten oder Zahl, **drehen** um X/Y/Z, **skalieren**, kopieren, flach legen, umdrehen.
+- **Anordnen** verteilt alle Objekte ohne Überlappung; was nicht passt, kommt auf neue Platten.
+- **Rückgängig/Wiederholen** (Strg+Z / Strg+Y).
+- **Desktop-Layout** unter Windows und macOS: Seitenleiste, Platten- und Objektliste, große 3D-Ansicht, Einstellungen daneben. Das Fenster startet maximiert.
+- **Eigenes App-Icon** unter Windows und macOS.
+
 ## Downloads
 
 | System | Datei |
 |---|---|
-| Windows 10/11 (64 Bit) | `Mobile-Slice-1.0.0-Windows-Setup.exe` |
-| Android 12 oder neuer (arm64) | `Mobile-Slice-1.0.0-Android-arm64.apk` |
-| macOS 12 oder neuer (Apple Silicon, M1 und neuer) | `Mobile-Slice-1.0.0-macOS-AppleSilicon.dmg` |
+| Windows 10/11 (64 Bit) | `Mobile-Slice-1.1.0-Windows-Setup.exe` |
+| Android 12 oder neuer (arm64) | `Mobile-Slice-1.1.0-Android-arm64.apk` |
+| macOS 12 oder neuer (Apple Silicon, M1 und neuer) | `Mobile-Slice-1.1.0-macOS-AppleSilicon.dmg` |
 
 ## Installation
 
