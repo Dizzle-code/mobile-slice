@@ -7,6 +7,10 @@ name: Release
 on:
   push:
     branches: [release-builds]
+    # The download page in docs/ does not change any build.
+    paths-ignore:
+      - "docs/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
