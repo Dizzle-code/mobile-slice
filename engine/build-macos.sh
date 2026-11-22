@@ -18,6 +18,8 @@ ARCH="$(uname -m)"
 TARGET="${OSX_DEPLOYMENT_TARGET:-12.0}"
 OUT="$REPO/app/macos/engine"
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
+# Newer Apple clang rejects old OpenVDB templates; CMake picks CXXFLAGS up for every dependency.
+export CXXFLAGS="${CXXFLAGS:-} -Wno-missing-template-arg-list-after-template-kw"
 
 echo "=== 1/5 Engine-Quellen @ $ENGINE_COMMIT ($ARCH)"
 if [[ ! -d "$WORK/.git" ]]; then
