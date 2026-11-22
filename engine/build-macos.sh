@@ -18,8 +18,6 @@ ARCH="$(uname -m)"
 TARGET="${OSX_DEPLOYMENT_TARGET:-12.0}"
 OUT="$REPO/app/macos/engine"
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-# Newer Apple clang rejects old OpenVDB templates; CMake picks CXXFLAGS up for every dependency.
-export CXXFLAGS="${CXXFLAGS:-} -Wno-missing-template-arg-list-after-template-kw"
 
 echo "=== 1/5 Engine-Quellen @ $ENGINE_COMMIT ($ARCH)"
 if [[ ! -d "$WORK/.git" ]]; then
@@ -37,6 +35,11 @@ echo "=== 2/5 Desktop-Anpassung"
 if ! grep -q SLICER_CLI_DIR "$WORK/src/CMakeLists.txt"; then
     perl -0pi -e 's/^add_subdirectory\(libslic3r\)(\r?\n)/add_subdirectory(libslic3r)$1if (SLICER_CLI_DIR)$1    add_subdirectory("\${SLICER_CLI_DIR}" slicer_cli)$1endif ()$1/m' "$WORK/src/CMakeLists.txt"
     grep -q SLICER_CLI_DIR "$WORK/src/CMakeLists.txt" || { echo "Anpassung passt nicht mehr: src/CMakeLists.txt" >&2; exit 1; }
+fi
+# Newer Apple clang rejects old OpenVDB templates. The deps build sets CMAKE_CXX_FLAGS itself, so the flag goes there.
+if ! grep -q Wno-missing-template-arg-list "$WORK/deps/deps-macos.cmake"; then
+    perl -pi -e 's/^(set\(DEP_WERRORS_SDK "[^"]*)"/$1 -Wno-missing-template-arg-list-after-template-kw"/' "$WORK/deps/deps-macos.cmake"
+    grep -q Wno-missing-template-arg-list "$WORK/deps/deps-macos.cmake" || { echo "Anpassung passt nicht mehr: deps/deps-macos.cmake" >&2; exit 1; }
 fi
 
 DEPS_BUILD="$WORK/deps/build/$ARCH"
